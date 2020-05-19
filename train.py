@@ -5,6 +5,7 @@ import argparse
 # Collect arguments from cmd line and parse them
 ap = argparse.ArgumentParser(description = "This file is used to train a Deep learning network and save the checkpoint",
                              formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+ap.add_argument("data_directory", metavar="data_directory", help="Location where data is stored", type=str)
 ap.add_argument("--save_dir", help="Location to save the results", type=str)
 ap.add_argument("--arch", help="Specify the pre-trained deep learning architecture to train on", default="resnet50", type=str)
 ap.add_argument("--learning_rate", help="Learning rate for optimizer", default=0.001, type=float)
