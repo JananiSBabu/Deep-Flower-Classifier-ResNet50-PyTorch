@@ -13,11 +13,12 @@ from collections import OrderedDict
 import argparse
 
 # Collect arguments from cmd line and parse them
-ap = argparse.ArgumentParser(description = "This file is used to train a Deep learning network and save the checkpoint",
+ap = argparse.ArgumentParser(description="This file is used to train a Deep learning network and save the checkpoint",
                              formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 ap.add_argument("data_directory", metavar="data_directory", help="Location where data is stored", type=str)
-ap.add_argument("--save_dir", help="Location to save the results", type=str)
-ap.add_argument("--arch", help="Specify the pre-trained deep learning architecture to train on", default="resnet50", type=str)
+ap.add_argument("--save_dir", help="Location to save the results", default='', type=str)
+ap.add_argument("--arch", help="Specify the pre-trained deep learning architecture to train on", default="resnet50",
+                type=str)
 ap.add_argument("--learning_rate", help="Learning rate for optimizer", default=0.003, type=float)
 ap.add_argument("--hidden_units", help="number of hidden units for training", default=512, type=int)
 ap.add_argument("--epochs", help="Number of epochs for training", default=1, type=int)
@@ -26,31 +27,38 @@ args = vars(ap.parse_args())
 
 print("Datadir : ", args["data_directory"])
 
+# consume user inputs
+data_dir = args["data_directory"] #'~/.pytorch/flower_data'
+save_dir = args["save_dir"]
+arch = args["arch"]
+learning_rate = args["learning_rate"]
+hidden_units = args["hidden_units"]
+epochs = args["epochs"]
+device = args["gpu"]
 
-# data_dir = args["data_directory"]
-data_dir = '~/.pytorch/flower_data'
+
 train_dir = data_dir + '/train'
 valid_dir = data_dir + '/valid'
 test_dir = data_dir + '/test'
 
 # Define your transforms for the training, validation, and testing sets
 train_transforms = transforms.Compose([transforms.RandomRotation(30),
-                                         transforms.RandomResizedCrop(224),
-                                         transforms.RandomHorizontalFlip(p = 0.6),
-                                         transforms.RandomVerticalFlip(p = 0.4),
-                                         transforms.ToTensor(),
-                                         transforms.Normalize([0.485, 0.456, 0.406],
-                                                              [0.229, 0.224, 0.225])])
+                                       transforms.RandomResizedCrop(224),
+                                       transforms.RandomHorizontalFlip(p=0.6),
+                                       transforms.RandomVerticalFlip(p=0.4),
+                                       transforms.ToTensor(),
+                                       transforms.Normalize([0.485, 0.456, 0.406],
+                                                            [0.229, 0.224, 0.225])])
 test_transforms = transforms.Compose([transforms.Resize(255),
                                       transforms.CenterCrop(224),
                                       transforms.ToTensor(),
                                       transforms.Normalize([0.485, 0.456, 0.406],
                                                            [0.229, 0.224, 0.225])])
 valid_transforms = transforms.Compose([transforms.Resize(255),
-                                      transforms.CenterCrop(224),
-                                      transforms.ToTensor(),
-                                      transforms.Normalize([0.485, 0.456, 0.406],
-                                                           [0.229, 0.224, 0.225])])
+                                       transforms.CenterCrop(224),
+                                       transforms.ToTensor(),
+                                       transforms.Normalize([0.485, 0.456, 0.406],
+                                                            [0.229, 0.224, 0.225])])
 
 # Load the datasets with ImageFolder
 train_data = datasets.ImageFolder(train_dir, transform=train_transforms)
@@ -66,12 +74,12 @@ validloader = torch.utils.data.DataLoader(valid_data, batch_size=64)
 num_output_classes = 102
 
 # setup to pick up GPU if available
-#device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-device = torch.device("cpu")  #TODO: remove this later
+# device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cpu")  # TODO: remove this later
 
 # get pre-trained model
 model = models.resnet50(pretrained=True)
-#print(model)
+# print(model)
 
 # freeze parameters - to prevent gradients and backprop
 for param in model.parameters():
@@ -82,13 +90,13 @@ classifier = nn.Sequential(nn.Linear(2048, 500),
                            nn.Dropout(p=0.2),
                            nn.Linear(500, num_output_classes),
                            nn.LogSoftmax(dim=1)
-                          )
+                           )
 model.fc = classifier
 
 # Initialization
 criterion = nn.NLLLoss()
 
-optimizer = optim.Adam(model.fc.parameters(), lr=0.003)
+optimizer = optim.Adam(model.fc.parameters(), lr=learning_rate)
 
 # move model to cuda if available
 model.to(device)
@@ -167,4 +175,10 @@ checkpoint = {'pretrained_model': models.resnet50(pretrained=True),
               'optim_state_dict': optimizer.state_dict(),
               'class_to_idx': train_data.class_to_idx}
 
-torch.save(checkpoint, 'trained_model_chpt.pth')
+chpt_file = 'trained_model_chpt.pth'
+if save_dir:
+    save_file_path = save_dir + chpt_file
+else:
+    save_file_path = chpt_file
+
+torch.save(checkpoint, save_file_path)

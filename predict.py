@@ -14,17 +14,24 @@ import argparse
 import image_processing_utils
 
 # Collect arguments from cmd line and parse them
-ap = argparse.ArgumentParser(description = "This file loads a pretrained model checkpoint and predict a flower name "
-                                           "from the image and displays the probabilities",
+ap = argparse.ArgumentParser(description="This file loads a pretrained model checkpoint and predict a flower name "
+                                         "from the image and displays the probabilities",
                              formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 ap.add_argument("image_path", metavar="image_path", help="Location where test image is stored", type=str)
 ap.add_argument("checkpoint_file", metavar="checkpoint_file", help="filename of the saved model checkpoint", type=str)
 ap.add_argument("--top_k", help="Returns top most likely classes", default="5", type=int)
-ap.add_argument("--category_names", help="file for mapping of categories to real names", type=str)
+ap.add_argument("--category_names_file", help="file for mapping of categories to names", default="", type=str)
 ap.add_argument("--gpu", help="Use gpu for inference", default="cpu", type=str)
 args = vars(ap.parse_args())
 
 print("image_path : ", args["image_path"])
+
+# Initialization
+checkpoint_file = args["checkpoint_file"]  # 'trained_model_chpt.pth'
+top_k = args["top_k"]
+category_names_file = args["category_names_file"]  # 'cat_to_name.json'
+device = args["gpu"]
+image_path = args["image_path"]
 
 
 ############################################
@@ -32,14 +39,17 @@ print("image_path : ", args["image_path"])
 ############################################
 
 def load_Checkpoint(filename):
-    ''' function that loads a checkpoint and rebuilds the model
-    '''
-    if torch.cuda.is_available():
+    """ function that loads a checkpoint and rebuilds the model
+
+    Args:
+        filename: name of the checkpoint file of pre trained model
+    """
+    if device == "gpu" and torch.cuda.is_available():
         map_location = lambda storage, loc: storage.cuda()
     else:
         map_location = 'cpu'
 
-    checkpoint = torch.load(filename, map_location='cpu')
+    checkpoint = torch.load(filename, map_location=map_location)
 
     # get pre-trained model
     # model = checkpoint['pretrained_model']
@@ -64,6 +74,7 @@ def load_Checkpoint(filename):
     model.class_to_idx = checkpoint['class_to_idx']
 
     return model
+
 
 def predict(image_path, model, topk=10):
     ''' Predict the class (or classes) of an image using a trained deep learning model.
@@ -96,49 +107,32 @@ def predict(image_path, model, topk=10):
 
     return top_prob, top_class
 
+
 ############################################
 #               End of Functions
 ############################################
+cat_to_name = []
+if category_names_file:
+    with open(category_names_file, 'r') as f:
+        cat_to_name = json.load(f)
 
-with open('cat_to_name.json', 'r') as f:
-    cat_to_name = json.load(f)
-
-num_output_classes = len(cat_to_name)
+num_output_classes = 102
 criterion = nn.NLLLoss()
-new_model = load_Checkpoint('trained_model_chpt.pth')
+new_model = load_Checkpoint(checkpoint_file)
 print("Loading checkpoint complete")
 
-test_dir = r'C:\Users\janan\.pytorch\flower_data\test'
+
 # test prediction
 with torch.no_grad():
-    image_path = test_dir + r'\1\image_06743.jpg'  # pink primrose
-    # image_path = test_dir+ r'\2\image_05125.jpg' # hard-leaved pocket orchid
-    # image_path = test_dir+ r'\76\image_02550.jpg' # morning glory
-    # image_path = test_dir+ r'\17\image_03830.jpg' # purple coneflower
-    # image_path = test_dir+ r'\74\image_01307.jpg' # rose
-    # image_path = test_dir+ r'\78\image_01903.jpg' # lotus lotus
-    # image_path = test_dir+ r'\18\image_04272.jpg' # peruvian lily * 4th
-    # image_path = test_dir+ r'\15\image_06351.jpg' # yellow iris * 5th
 
-    label_class = [2]  # this should be target label
-
-    savedmodel = new_model
-    # savedmodel = modelSaved
-    topk = 10
-
-    top_prob, top_class = predict(image_path, savedmodel, topk=10)
+    top_prob, top_class = predict(image_path, new_model, top_k)
 
     image = Image.open(image_path)
     image_ndarray = image_processing_utils.process_image(image)
     image_torch = torch.from_numpy(image_ndarray)
-    # imshow(image_torch)
+    image_processing_utils.imshow(image_torch)
 
     print(top_prob)
     print(top_class)
 
-    image_processing_utils.view_classify(image_torch, top_prob, top_class, topk, cat_to_name, label_class)
-
-
-
-
-
+    image_processing_utils.view_classify(image_torch, top_prob, top_class, top_k, cat_to_name)

@@ -15,9 +15,9 @@ import argparse
 
 
 def process_image(image):
-    ''' Scales, crops, and normalizes a PIL image for a PyTorch model,
+    """ Scales, crops, and normalizes a PIL image for a PyTorch model,
         returns an Numpy array
-    '''
+    """
     # TODO: Process a PIL image for use in a PyTorch model
 
     crop_size = 224
@@ -62,7 +62,7 @@ def imshow(image, ax=None, title=None):
     # but matplotlib assumes is the third dimension
     image = image.numpy().transpose((1, 2, 0))
 
-    # Undo preprocessing
+    # Undo pre-processing
     mean = np.array([0.485, 0.456, 0.406])
     std = np.array([0.229, 0.224, 0.225])
     image = std * image + mean
@@ -75,21 +75,23 @@ def imshow(image, ax=None, title=None):
     return ax
 
 
-def view_classify(image_torch, top_prob,  top_class, topk, cat_to_name, label_class):
-    class_names = [cat_to_name[item] for item in top_class]
+def view_classify(image_torch, top_prob,  top_class, topk, cat_to_name=[]):
+
+    if cat_to_name:
+        class_names = [cat_to_name[item] for item in top_class]
+    else:
+        class_names = top_class
+
     print(class_names)
 
     fig, (ax1, ax2) = plt.subplots(figsize=(6, 15), ncols=2)
     ax1 = imshow(image_torch, ax=ax1)
     ax1.axis('off')
 
-    # ax1.set_title(cat_to_name[label_class]) # ---> fix this!!
-
-    y_pos = np.arange(topk)
     ax2.barh(np.arange(topk), list(reversed(top_prob[0])))
     ax2.set_aspect(0.1)
     ax2.set_yticks(np.arange(topk))
-    ax2.set_yticklabels(reversed(class_names), size='small');
+    ax2.set_yticklabels(reversed(class_names), size='small')
     ax2.set_title('Class Probability')
     ax2.set_xlim(0, 0.4)
 
