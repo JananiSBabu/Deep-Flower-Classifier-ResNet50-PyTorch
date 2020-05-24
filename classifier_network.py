@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchvision import models
+import time
 
 
 class ClassifierNetwork(nn.Module):
@@ -25,13 +26,89 @@ class ClassifierNetwork(nn.Module):
     def forward(self, x):
         # add activation functions and dropouts to each layer
         for layer in self.hidden_layers:
-            x = nn.ReLU(layer(x))
+            x = F.relu(layer(x))
             x = self.dropouts(x)
 
         # dropouts excluded for output layer
         x = self.output_layer(x)
-        x = nn.LogSoftmax(x, dim=1)
+        x = F.log_softmax(x, dim=1)
         return x
+
+
+def validate(model, validloader, criterion, device):
+    valid_loss = 0
+    accuracy = 0
+
+    for images, labels in validloader:
+        # move the variables to GPU
+        images, labels = images.to(device), labels.to(device)
+
+        logps = model(images)
+        loss = criterion(logps, labels)
+        valid_loss += loss.item()
+
+        # Calculate accuracy
+        ps = torch.exp(logps)
+        top_prob, top_class = ps.topk(1, dim=1)
+        targets = labels.view(*top_class.shape)
+        is_equal = top_class == targets
+        accuracy += torch.mean(is_equal.type(torch.FloatTensor))
+
+    return valid_loss, accuracy
+
+
+def train(model, trainloader, criterion, optimizer, device, validloader, epochs=1, print_every=40):
+    traintime = time.time()
+    steps = 0
+    training_loss = 0
+    train_losses, valid_losses = [], []
+
+    # move model to cuda if available
+    model.to(device)
+
+    for epoch in range(epochs):
+        model.train()
+        for images, labels in trainloader:
+            steps += 1
+
+            # move the variables to GPU
+            images, labels = images.to(device), labels.to(device)
+
+            optimizer.zero_grad()
+
+            logps = model(images)
+            loss = criterion(logps, labels)
+            loss.backward()
+            optimizer.step()
+
+            training_loss += loss.item()
+
+        if steps % print_every == 0:
+            # Perform validation as the model is trained for a certain number of inputs from a batch
+
+            # turn of dropouts
+            model.eval()
+
+            # turn off gradient computation for validation
+            with torch.no_grad():
+                valid_loss, accuracy = validate(model, validloader, criterion, device)
+
+            train_losses.append(training_loss / len(trainloader))
+            valid_losses.append(valid_loss / len(validloader))
+
+            print(f"Epoch {epoch + 1}/{epochs}.. "
+                  f"Train loss: {training_loss / len(trainloader):.3f}.. "
+                  f"validation loss: {valid_loss / len(validloader):.3f}.. "
+                  f"Validation accuracy: {accuracy / len(validloader):.3f}")
+
+            training_loss = 0
+
+            # switch back to training
+            model.train()
+
+    print(f" \nTotal Time : {(time.time() - traintime) / 60:.3f} minutes")
+
+    return model, train_losses, valid_losses
 
 
 def load_pretrained_models(modelname="resnet50"):
@@ -49,3 +126,28 @@ def load_pretrained_models(modelname="resnet50"):
     input_size = classifier_layer.in_features
 
     return model, input_size
+
+
+def construct_model(arch, hidden_units, num_output_classes, drop_prob):
+    # load the pre-trained model
+    model, input_size = load_pretrained_models(modelname=arch)
+
+    # freeze parameters - to prevent gradients and back prop
+    for param in model.parameters():
+        param.requires_grad = False
+
+    # Create the classifier
+    classifier = ClassifierNetwork(input_size, hidden_units, num_output_classes, drop_prob=0.2)
+
+    # find the name of last layer in model
+    l = []
+    [l.append(name) for name, param in model.named_parameters()]
+    last_layer = l[-1]
+
+    # add classifier to the pre-trained network
+    if "classifier" in last_layer:
+        model.classifier = classifier
+    elif "fc" in last_layer:
+        model.fc = classifier
+
+    return model

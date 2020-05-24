@@ -11,7 +11,7 @@ from PIL import Image
 import json
 from collections import OrderedDict
 import argparse
-from classifier_network import ClassifierNetwork, load_pretrained_models
+from classifier_network import ClassifierNetwork, load_pretrained_models, train, construct_model
 
 # Collect arguments from cmd line and parse them
 ap = argparse.ArgumentParser(description="This file is used to train a Deep learning network and save the checkpoint",
@@ -73,113 +73,35 @@ validloader = torch.utils.data.DataLoader(valid_data, batch_size=64)
 
 # Build and train your network
 num_output_classes = 102
+drop_prob = 0.2
 
 # setup to pick up GPU if available
 # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 device = torch.device("cpu")  # TODO: remove this later
 
-# load the pre-trained model
-model, input_size = load_pretrained_models(modelname="resnet50")
-
-# freeze parameters - to prevent gradients and back prop
-for param in model.parameters():
-    param.requires_grad = False
-
-# Create the classifier
-classifier = ClassifierNetwork(input_size, hidden_units, num_output_classes, drop_prob=0.2)
-
-# add classifier to the pre-trained network
-l = []
-[l.append(name) for name, param in model.named_parameters()]
-# find the name of last layer in model
-last_layer = l[-1]
-if "classifier" in last_layer:
-    model.classifier = classifier
-elif "fc" in last_layer:
-    model.fc = classifier
-
+# Construct a model from pretrained network and add a custom classifier
+model, input_size = construct_model(arch, hidden_units, num_output_classes, drop_prob)
 
 # Initialization
 criterion = nn.NLLLoss()
-
 optimizer = optim.Adam(model.fc.parameters(), lr=learning_rate)
 
-# move model to cuda if available
-model.to(device)
-
-traintime = time.time()
-
-epochs = 3
-training_loss = 0
-
-train_losses, valid_losses = [], []
-
-for epoch in range(epochs):
-    model.train()
-    for images, labels in trainloader:
-
-        # move the variables to GPU
-        images, labels = images.to(device), labels.to(device)
-
-        optimizer.zero_grad()
-
-        logps = model(images)
-        loss = criterion(logps, labels)
-        loss.backward()
-        optimizer.step()
-
-        training_loss += loss.item()
-
-    else:
-        test_loss = 0
-        accuracy = 0
-
-        # turn of dropouts
-        model.eval()
-
-        with torch.no_grad():
-
-            for images, labels in validloader:
-                # move the variables to GPU
-                images, labels = images.to(device), labels.to(device)
-
-                start = time.time()
-
-                logps = model(images)
-                loss = criterion(logps, labels)
-                test_loss += loss.item()
-
-                # Calculate accuracy
-                ps = torch.exp(logps)
-                top_prob, top_class = ps.topk(1, dim=1)
-                targets = labels.view(*top_class.shape)
-                isEqual = top_class == targets
-                accuracy += torch.mean(isEqual.type(torch.FloatTensor))
-
-            train_losses.append(training_loss / len(trainloader))
-            valid_losses.append(test_loss / len(validloader))
-
-            print(f"Epoch {epoch + 1}/{epochs}.. "
-                  f"Train loss: {training_loss / len(trainloader):.3f}.. "
-                  f"validation loss: {test_loss / len(validloader):.3f}.. "
-                  f"Validation accuracy: {accuracy / len(validloader):.3f}")
-            print(f"Device = {device}; Time per batch: {(time.time() - start) / len(validloader):.3f} seconds")
-
-            training_loss = 0
-
-            # switch back to training
-            model.train()
-
-print(f" \nTotal Time : {(time.time() - traintime) / 60:.3f} minutes")
+# Do the training
+model, train_losses, valid_losses = train(model, trainloader, epochs, criterion, optimizer, device, validloader)
 
 # Save the checkpoint
-checkpoint = {'pretrained_model': models.resnet50(pretrained=True),
-              'input_size': 2048,
-              'output_size': 102,
-              'hidden_layer': 500,
+checkpoint = {'pretrained_model': arch,
+              'input_size': input_size,
+              'output_size': num_output_classes,
+              'hidden_units': hidden_units,
               'model_state_dict': model.state_dict(),
+              'class_to_idx': train_data.class_to_idx,
+              'drop_prob': drop_prob,
+              'criterion': criterion,
+              'optimizer': optimizer,
               'optim_state_dict': optimizer.state_dict(),
-              'class_to_idx': train_data.class_to_idx}
+              'train_losses': train_losses,
+              'valid_losses': valid_losses}
 
 chpt_file = 'trained_model_chpt.pth'
 if save_dir:

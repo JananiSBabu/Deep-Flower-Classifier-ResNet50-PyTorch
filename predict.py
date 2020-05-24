@@ -51,23 +51,13 @@ def load_Checkpoint(filename):
 
     checkpoint = torch.load(filename, map_location=map_location)
 
-    # get pre-trained model
-    # model = checkpoint['pretrained_model']
-    model = models.resnet50(pretrained=True)
-
-    # freeze parameters - to prevent gradients and backprop
-    for param in model.parameters():
-        param.requires_grad = False
-
-    # TODO - this function should load for any architecture
-
-    classifier = nn.Sequential(nn.Linear(2048, 500),
-                               nn.ReLU(),
-                               nn.Dropout(p=0.2),
-                               nn.Linear(500, num_output_classes),
-                               nn.LogSoftmax(dim=1)
-                               )
-    model.fc = classifier
+    arch = checkpoint['pretrained_model']
+    hidden_units = checkpoint['hidden_units']
+    output_size = checkpoint['output_size']
+    drop_prob = checkpoint['drop_prob']
+    
+    # Construct a model from pretrained network and add a custom classifier
+    model, input_size = construct_model(arch, hidden_units, output_size, drop_prob)
 
     model.load_state_dict(checkpoint['model_state_dict'])
 
