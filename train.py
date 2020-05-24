@@ -11,6 +11,7 @@ from PIL import Image
 import json
 from collections import OrderedDict
 import argparse
+from classifier_network import ClassifierNetwork, load_pretrained_models
 
 # Collect arguments from cmd line and parse them
 ap = argparse.ArgumentParser(description="This file is used to train a Deep learning network and save the checkpoint",
@@ -20,7 +21,7 @@ ap.add_argument("--save_dir", help="Location to save the results", default='', t
 ap.add_argument("--arch", help="Specify the pre-trained deep learning architecture to train on", default="resnet50",
                 type=str)
 ap.add_argument("--learning_rate", help="Learning rate for optimizer", default=0.003, type=float)
-ap.add_argument("--hidden_units", help="number of hidden units for training", default=512, type=int)
+ap.add_argument("--hidden_units", help="number of hidden units for training", default=[512], type=int)
 ap.add_argument("--epochs", help="Number of epochs for training", default=1, type=int)
 ap.add_argument("--gpu", help="Use gpu for training", default="cpu", type=str)
 args = vars(ap.parse_args())
@@ -65,33 +66,38 @@ train_data = datasets.ImageFolder(train_dir, transform=train_transforms)
 test_data = datasets.ImageFolder(test_dir, transform=test_transforms)
 valid_data = datasets.ImageFolder(valid_dir, transform=valid_transforms)
 
-# Using the image datasets and the transforms, define the dataloaders
+# Using the image datasets and the transforms, define the data loaders
 trainloader = torch.utils.data.DataLoader(train_data, batch_size=64, shuffle=True)
 testloader = torch.utils.data.DataLoader(test_data, batch_size=64)
 validloader = torch.utils.data.DataLoader(valid_data, batch_size=64)
 
-# TODO: Build and train your network
+# Build and train your network
 num_output_classes = 102
 
 # setup to pick up GPU if available
 # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 device = torch.device("cpu")  # TODO: remove this later
 
-# get pre-trained model
-model = models.resnet50(pretrained=True)
-# print(model)
+# load the pre-trained model
+model, input_size = load_pretrained_models(modelname="resnet50")
 
-# freeze parameters - to prevent gradients and backprop
+# freeze parameters - to prevent gradients and back prop
 for param in model.parameters():
     param.requires_grad = False
 
-classifier = nn.Sequential(nn.Linear(2048, 500),
-                           nn.ReLU(),
-                           nn.Dropout(p=0.2),
-                           nn.Linear(500, num_output_classes),
-                           nn.LogSoftmax(dim=1)
-                           )
-model.fc = classifier
+# Create the classifier
+classifier = ClassifierNetwork(input_size, hidden_units, num_output_classes, drop_prob=0.2)
+
+# add classifier to the pre-trained network
+l = []
+[l.append(name) for name, param in model.named_parameters()]
+# find the name of last layer in model
+last_layer = l[-1]
+if "classifier" in last_layer:
+    model.classifier = classifier
+elif "fc" in last_layer:
+    model.fc = classifier
+
 
 # Initialization
 criterion = nn.NLLLoss()
