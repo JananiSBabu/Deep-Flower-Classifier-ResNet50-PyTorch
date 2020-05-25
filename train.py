@@ -1,17 +1,9 @@
 import matplotlib.pyplot as plt
-
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
 from torchvision import datasets, transforms, models
-import time
-import numpy as np
-from PIL import Image
-import json
-from collections import OrderedDict
 import argparse
-from classifier_network import ClassifierNetwork, load_pretrained_models, train, construct_model
+from classifier_network import train, construct_model
 
 # Collect arguments from cmd line and parse them
 ap = argparse.ArgumentParser(description="This file is used to train a Deep learning network and save the checkpoint",
@@ -21,7 +13,7 @@ ap.add_argument("--save_dir", help="Location to save the results", default='', t
 ap.add_argument("--arch", help="Specify the pre-trained deep learning architecture to train on", default="resnet50",
                 type=str)
 ap.add_argument("--learning_rate", help="Learning rate for optimizer", default=0.003, type=float)
-ap.add_argument("--hidden_units", help="number of hidden units for training", default=[512], type=int)
+ap.add_argument("--hidden_units", help="number of hidden units for training", nargs='*', default=[], type=int)
 ap.add_argument("--epochs", help="Number of epochs for training", default=1, type=int)
 ap.add_argument("--gpu", help="Use gpu for training", default="cpu", type=str)
 args = vars(ap.parse_args())
@@ -38,7 +30,7 @@ epochs = args["epochs"]
 device = args["gpu"]
 
 # TODO remove this
-hidden_units = [1024, 512, 256]
+# hidden_units = [1024, 512, 256]
 print("hidden_units : ", hidden_units)
 print("arch : ", arch, type(arch))
 
@@ -80,8 +72,7 @@ num_output_classes = 102
 drop_prob = 0.2
 
 # setup to pick up GPU if available
-# device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-device = torch.device("cpu")  # TODO: remove this later
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # Construct a model from pretrained network and add a custom classifier
 model, input_size, optimizer = construct_model(arch, hidden_units, num_output_classes, drop_prob, learning_rate)

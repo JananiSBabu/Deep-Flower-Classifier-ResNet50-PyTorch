@@ -1,15 +1,8 @@
 import matplotlib.pyplot as plt
-
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
-from torchvision import datasets, transforms, models
-import time
-import numpy as np
 from PIL import Image
 import json
-from collections import OrderedDict
 import argparse
 import image_processing_utils
 
@@ -97,7 +90,7 @@ def predict(image_path, model, topk=10):
     top_idx = top_idx[0].numpy()
     top_class = [idx_to_class[entry] for entry in top_idx]
 
-    return top_prob, top_class
+    return list(top_prob[0].numpy()), top_class
 
 
 ############################################
@@ -122,9 +115,18 @@ with torch.no_grad():
     image = Image.open(image_path)
     image_ndarray = image_processing_utils.process_image(image)
     image_torch = torch.from_numpy(image_ndarray)
-    image_processing_utils.imshow(image_torch)
+    #image_processing_utils.imshow(image_torch)
 
     print(top_prob)
     print(top_class)
 
-    image_processing_utils.view_classify(image_torch, top_prob, top_class, top_k, cat_to_name)
+    #image_processing_utils.view_classify(image_torch, top_prob, top_class, top_k, cat_to_name)
+
+    print("\n\n ** prediction - results **")
+    if cat_to_name:
+        class_names = [cat_to_name[item] for item in top_class]
+    else:
+        class_names = top_class
+    print("Class name : ", class_names[0])
+    print("Class number : ", top_class[0])
+    print("Probability : ", top_prob[0], "\n")
