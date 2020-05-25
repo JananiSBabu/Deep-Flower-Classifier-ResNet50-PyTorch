@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchvision import models
 import time
+import torch.optim as optim
 
 
 class ClassifierNetwork(nn.Module):
@@ -10,6 +11,7 @@ class ClassifierNetwork(nn.Module):
         super().__init__()
 
         # create input layer
+        print("hidden_layers : ", hidden_layers)
         self.hidden_layers = nn.ModuleList([nn.Linear(input_size, hidden_layers[0])])
 
         # add all the hidden layers
@@ -43,7 +45,7 @@ def validate(model, validloader, criterion, device):
         # move the variables to GPU
         images, labels = images.to(device), labels.to(device)
 
-        logps = model(images)
+        logps = model.forward(images)
         loss = criterion(logps, labels)
         valid_loss += loss.item()
 
@@ -64,6 +66,7 @@ def train(model, trainloader, criterion, optimizer, device, validloader, epochs=
     train_losses, valid_losses = [], []
 
     # move model to cuda if available
+    print("device** : ", device)
     model.to(device)
 
     for epoch in range(epochs):
@@ -76,7 +79,7 @@ def train(model, trainloader, criterion, optimizer, device, validloader, epochs=
 
             optimizer.zero_grad()
 
-            logps = model(images)
+            logps = model.forward(images)
             loss = criterion(logps, labels)
             loss.backward()
             optimizer.step()
@@ -128,26 +131,31 @@ def load_pretrained_models(modelname="resnet50"):
     return model, input_size
 
 
-def construct_model(arch, hidden_units, num_output_classes, drop_prob):
+def construct_model(arch, hidden_units, num_output_classes, drop_prob=0.2, learning_rate=0.03):
     # load the pre-trained model
     model, input_size = load_pretrained_models(modelname=arch)
-
-    # freeze parameters - to prevent gradients and back prop
-    for param in model.parameters():
-        param.requires_grad = False
-
-    # Create the classifier
-    classifier = ClassifierNetwork(input_size, hidden_units, num_output_classes, drop_prob=0.2)
 
     # find the name of last layer in model
     l = []
     [l.append(name) for name, param in model.named_parameters()]
     last_layer = l[-1]
 
+    # freeze parameters - to prevent gradients and back prop
+    for param in model.parameters():
+        param.requires_grad = False
+
+    # Create the classifier
+
+    classifier = ClassifierNetwork(input_size, num_output_classes, hidden_units, drop_prob=drop_prob)
+
+    print("classifier object created")
+
     # add classifier to the pre-trained network
     if "classifier" in last_layer:
         model.classifier = classifier
+        optimizer = optim.Adam(model.classifier.parameters(), lr=learning_rate)
     elif "fc" in last_layer:
         model.fc = classifier
+        optimizer = optim.Adam(model.fc.parameters(), lr=learning_rate)
 
-    return model
+    return model, input_size, optimizer

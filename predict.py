@@ -14,6 +14,8 @@ import argparse
 import image_processing_utils
 
 # Collect arguments from cmd line and parse them
+from classifier_network import construct_model
+
 ap = argparse.ArgumentParser(description="This file loads a pretrained model checkpoint and predict a flower name "
                                          "from the image and displays the probabilities",
                              formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -57,7 +59,7 @@ def load_Checkpoint(filename):
     drop_prob = checkpoint['drop_prob']
     
     # Construct a model from pretrained network and add a custom classifier
-    model, input_size = construct_model(arch, hidden_units, output_size, drop_prob)
+    model, input_size, optimizer = construct_model(arch, hidden_units, output_size, drop_prob)
 
     model.load_state_dict(checkpoint['model_state_dict'])
 

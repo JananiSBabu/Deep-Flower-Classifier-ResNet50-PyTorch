@@ -37,6 +37,10 @@ hidden_units = args["hidden_units"]
 epochs = args["epochs"]
 device = args["gpu"]
 
+# TODO remove this
+hidden_units = [1024, 512, 256]
+print("hidden_units : ", hidden_units)
+print("arch : ", arch, type(arch))
 
 train_dir = data_dir + '/train'
 valid_dir = data_dir + '/valid'
@@ -80,14 +84,17 @@ drop_prob = 0.2
 device = torch.device("cpu")  # TODO: remove this later
 
 # Construct a model from pretrained network and add a custom classifier
-model, input_size = construct_model(arch, hidden_units, num_output_classes, drop_prob)
+model, input_size, optimizer = construct_model(arch, hidden_units, num_output_classes, drop_prob, learning_rate)
+
+print("back in train.py")
 
 # Initialization
 criterion = nn.NLLLoss()
-optimizer = optim.Adam(model.fc.parameters(), lr=learning_rate)
+
 
 # Do the training
-model, train_losses, valid_losses = train(model, trainloader, epochs, criterion, optimizer, device, validloader)
+model, train_losses, valid_losses = train(model, trainloader, criterion, optimizer, device, validloader, epochs)
+print("\n \n Training complete.. \n ")
 
 # Save the checkpoint
 checkpoint = {'pretrained_model': arch,
