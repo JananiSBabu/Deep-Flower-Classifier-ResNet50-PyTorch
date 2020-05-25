@@ -86,28 +86,28 @@ def train(model, trainloader, criterion, optimizer, device, validloader, epochs=
 
             training_loss += loss.item()
 
-        if steps % print_every == 0:
-            # Perform validation as the model is trained for a certain number of inputs from a batch
+            if steps % print_every == 0:
+                # Perform validation as the model is trained for a certain number of inputs from a batch
 
-            # turn of dropouts
-            model.eval()
+                # turn of dropouts
+                model.eval()
 
-            # turn off gradient computation for validation
-            with torch.no_grad():
-                valid_loss, accuracy = validate(model, validloader, criterion, device)
+                # turn off gradient computation for validation
+                with torch.no_grad():
+                    valid_loss, accuracy = validate(model, validloader, criterion, device)
 
-            train_losses.append(training_loss / len(trainloader))
-            valid_losses.append(valid_loss / len(validloader))
+                train_losses.append(training_loss / len(trainloader))
+                valid_losses.append(valid_loss / len(validloader))
 
-            print(f"Epoch {epoch + 1}/{epochs}.. "
-                  f"Train loss: {training_loss / len(trainloader):.3f}.. "
-                  f"validation loss: {valid_loss / len(validloader):.3f}.. "
-                  f"Validation accuracy: {accuracy / len(validloader):.3f}")
+                print(f"Epoch {epoch + 1}/{epochs}.. "
+                      f"Train loss: {training_loss / len(trainloader):.3f}.. "
+                      f"validation loss: {valid_loss / len(validloader):.3f}.. "
+                      f"Validation accuracy: {accuracy / len(validloader):.3f}")
 
-            training_loss = 0
+                training_loss = 0
 
-            # switch back to training
-            model.train()
+                # switch back to training
+                model.train()
 
     print(f" \nTotal Time : {(time.time() - traintime) / 60:.3f} minutes")
 
