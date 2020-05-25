@@ -1,16 +1,6 @@
 import matplotlib.pyplot as plt
-
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
-from torchvision import datasets, transforms, models
-import time
 import numpy as np
 from PIL import Image
-import json
-from collections import OrderedDict
-import argparse
 
 
 
@@ -88,7 +78,7 @@ def view_classify(image_torch, top_prob,  top_class, topk, cat_to_name=[]):
     ax1 = imshow(image_torch, ax=ax1)
     ax1.axis('off')
 
-    ax2.barh(np.arange(topk), list(reversed(top_prob[0])))
+    ax2.barh(np.arange(topk), list(reversed(top_prob)))
     ax2.set_aspect(0.1)
     ax2.set_yticks(np.arange(topk))
     ax2.set_yticklabels(reversed(class_names), size='small')
