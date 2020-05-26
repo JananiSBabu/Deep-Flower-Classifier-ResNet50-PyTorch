@@ -1,0 +1,11 @@
+
+# full input
+python train.py ~/.pytorch/flower_data --arch resnet50 --hidden_units [1025, 512, 256] --learning_rate 0.001
+
+python train.py ~/.pytorch/flower_data --arch resnet50 --learning_rate 0.001 --hidden_units 1024 512 256
+
+
+
+Workspace testing:
+
+python train.py flowers --arch resnet50 --learning_rate 0.001 --hidden_units 1024 512 256 --epochs 20 --gpu gpu
