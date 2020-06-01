@@ -19,6 +19,7 @@ C:\Users\janan\.pytorch\flower_data\test\78\image_01903.jpg # lotus lotus
 C:\Users\janan\.pytorch\flower_data\test\18\image_04272.jpg # peruvian lily * 4th
 C:\Users\janan\.pytorch\flower_data\test\15\image_06351.jpg # yellow iris * 5th
 
+# ======================================================
 testing in workspace:
 
 python predict.py flowers/test/1/image_06743.jpg  trained_model_chpt.pth --top_k 10 --category_names_file cat_to_name.json --gpu gpu
