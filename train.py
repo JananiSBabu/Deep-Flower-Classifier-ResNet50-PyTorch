@@ -14,7 +14,7 @@ ap.add_argument("--arch", help="Specify the pre-trained deep learning architectu
                 type=str)
 ap.add_argument("--learning_rate", help="Learning rate for optimizer", default=0.003, type=float)
 ap.add_argument("--hidden_units", help="number of hidden units for training", nargs='*', default=[], type=int)
-ap.add_argument("--epochs", help="Number of epochs for training", default=1, type=int)
+ap.add_argument("--epochs", help="Number of epochs for training", default=15, type=int)
 ap.add_argument("--gpu", help="Use gpu for training", default="cpu", type=str)
 args = vars(ap.parse_args())
 
@@ -27,7 +27,8 @@ arch = args["arch"]
 learning_rate = args["learning_rate"]
 hidden_units = args["hidden_units"]
 epochs = args["epochs"]
-device = args["gpu"]
+device = torch.device('cuda' if args['gpu'] == 'gpu' and torch.cuda.is_available() else 'cpu')
+print("Device selected  :  ", device)
 
 # TODO remove this
 # hidden_units = [1024, 512, 256]
@@ -68,11 +69,8 @@ testloader = torch.utils.data.DataLoader(test_data, batch_size=64)
 validloader = torch.utils.data.DataLoader(valid_data, batch_size=64)
 
 # Build and train your network
-num_output_classes = 102
+num_output_classes = len(train_data.class_to_idx)
 drop_prob = 0.2
-
-# setup to pick up GPU if available
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # Construct a model from pretrained network and add a custom classifier
 model, input_size, optimizer = construct_model(arch, hidden_units, num_output_classes, drop_prob, learning_rate)
@@ -81,7 +79,6 @@ print("back in train.py")
 
 # Initialization
 criterion = nn.NLLLoss()
-
 
 # Do the training
 model, train_losses, valid_losses = train(model, trainloader, criterion, optimizer, device, validloader, epochs)

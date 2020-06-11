@@ -25,26 +25,22 @@ print("image_path : ", args["image_path"])
 checkpoint_file = args["checkpoint_file"]  # 'trained_model_chpt.pth'
 top_k = args["top_k"]
 category_names_file = args["category_names_file"]  # 'cat_to_name.json'
-device = args["gpu"]
 image_path = args["image_path"]
-
+device = torch.device('cuda' if args['gpu'] == 'gpu' and torch.cuda.is_available() else 'cpu')
+print("Device selected  :  ", device)
 
 ############################################
 #               Functions
 ############################################
 
-def load_Checkpoint(filename):
+def load_Checkpoint(filename, device):
     """ function that loads a checkpoint and rebuilds the model
 
     Args:
         filename: name of the checkpoint file of pre trained model
     """
-    if device == "gpu" and torch.cuda.is_available():
-        map_location = lambda storage, loc: storage.cuda()
-    else:
-        map_location = 'cpu'
 
-    checkpoint = torch.load(filename, map_location=map_location)
+    checkpoint = torch.load(filename)
 
     arch = checkpoint['pretrained_model']
     hidden_units = checkpoint['hidden_units']
@@ -58,10 +54,10 @@ def load_Checkpoint(filename):
 
     model.class_to_idx = checkpoint['class_to_idx']
 
-    return model
+    return model, output_size
 
 
-def predict(image_path, model, topk=10):
+def predict(image_path, model, device, topk=10):
     ''' Predict the class (or classes) of an image using a trained deep learning model.
     '''
 
@@ -69,24 +65,35 @@ def predict(image_path, model, topk=10):
     image = Image.open(image_path)
 
     image_ndarray = image_processing_utils.process_image(image)
-
+    
+    # turn off dropouts
+    model.eval()
+    
     # create a torch tensor of type float32
-    image_torch = torch.from_numpy(image_ndarray).float()
+    image_torch = torch.from_numpy(image_ndarray).type(torch.FloatTensor)
+    
+    # Load model / inputs to device  
+    model.to(device)
+    image_torch = image_torch.to(device)    
+    print("device :", device)
+    print("image_torch :", image_torch.device)
 
     # reshape to incorporate batch size
-    batch_img = torch.unsqueeze(image_torch, 0)
+    batch_img = torch.unsqueeze(image_torch, 0) 
 
     logps = model(batch_img)
     ps = torch.exp(logps)
     print("Max ps : ", ps.max())
     top_prob, top_idx = ps.topk(topk, dim=1)
 
-    print("top idx :", top_idx)
-
     # index to class mapping
     idx_to_class = {value: key for key, value in model.class_to_idx.items()}
 
-    # convert torch to numpy
+    # move tensors to CPU for numpy operations
+    top_prob = top_prob.cpu()
+    top_idx = top_idx.cpu()
+    
+    # convert torch to numpy    
     top_idx = top_idx[0].numpy()
     top_class = [idx_to_class[entry] for entry in top_idx]
 
@@ -101,16 +108,15 @@ if category_names_file:
     with open(category_names_file, 'r') as f:
         cat_to_name = json.load(f)
 
-num_output_classes = 102
 criterion = nn.NLLLoss()
-new_model = load_Checkpoint(checkpoint_file)
-print("Loading checkpoint complete")
+new_model, num_output_classes= load_Checkpoint(checkpoint_file, device)
+print("Loading che ckpoint complete")
 
 
 # test prediction
 with torch.no_grad():
 
-    top_prob, top_class = predict(image_path, new_model, top_k)
+    top_prob, top_class = predict(image_path, new_model, device, top_k)
 
     image = Image.open(image_path)
     image_ndarray = image_processing_utils.process_image(image)
@@ -121,8 +127,11 @@ with torch.no_grad():
     print(top_class)
 
     #image_processing_utils.view_classify(image_torch, top_prob, top_class, top_k, cat_to_name)
+    
+    
 
-    print("\n\n ** prediction - results **")
+        
+    print("\n\n ** prediction - results **")    
     if cat_to_name:
         class_names = [cat_to_name[item] for item in top_class]
     else:
@@ -130,3 +139,5 @@ with torch.no_grad():
     print("Class name : ", class_names[0])
     print("Class number : ", top_class[0])
     print("Probability : ", top_prob[0], "\n")
+    
+    
