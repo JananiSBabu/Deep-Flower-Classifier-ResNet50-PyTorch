@@ -4,11 +4,15 @@ from PIL import Image
 
 
 def process_image(image):
-    """ Scales, crops, and normalizes a PIL image for a PyTorch model,
-        returns an Numpy array
     """
-    # TODO: Process a PIL image for use in a PyTorch model
+        Scales, crops, and normalizes a PIL image for a PyTorch model,
+        returns an Numpy array
 
+        Args:
+            image: input image
+        Returns:
+            out_image: processed image
+    """
     crop_size = 224
     new_width = 256
     # ImageNet mean and std
@@ -43,7 +47,15 @@ def process_image(image):
 
 
 def imshow(image, ax=None, title=None):
-    """Imshow for Tensor."""
+    """
+        Imshow for Tensor.
+        Args:
+            image: input image
+            ax: axis for plotting
+            title: title for plotting
+        Returns:
+            ax: axis for plotting
+    """
     if ax is None:
         fig, ax = plt.subplots()
 
@@ -65,7 +77,16 @@ def imshow(image, ax=None, title=None):
 
 
 def view_classify(image_torch, top_prob,  top_class, topk, cat_to_name=[]):
+    """
+        To visualize classification results of a specified image
 
+        Args:
+            image_torch: input image
+            top_prob: top probabilities from classification
+            top_class: top class names from classification
+            topk: specifies"k" top values to be returned from classification
+            cat_to_name: list containing class category names if specified
+    """
     if cat_to_name:
         class_names = [cat_to_name[item] for item in top_class]
     else:

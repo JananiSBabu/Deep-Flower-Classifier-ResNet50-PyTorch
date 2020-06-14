@@ -34,9 +34,9 @@ print("Device selected  :  ", device)
 #               Functions
 ############################################
 
-def load_Checkpoint(filename, device):
+def load_checkpoint(filename, device):
     """
-    function that loads a checkpoint and rebuilds the model
+    function that loads a checkpoint of a previously trained model and rebuilds the model
 
     Args:
         filename: name of the checkpoint file of pre trained model
@@ -119,13 +119,16 @@ def predict(image_path, model, device, topk=10):
 ############################################
 #               End of Functions
 ############################################
+
+# If classification category names file is provided, load it
 cat_to_name = []
 if category_names_file:
     with open(category_names_file, 'r') as f:
         cat_to_name = json.load(f)
 
+# Re-build the model from the saved checkpoint file
 criterion = nn.NLLLoss()
-new_model, num_output_classes = load_Checkpoint(checkpoint_file, device)
+new_model, num_output_classes = load_checkpoint(checkpoint_file, device)
 print("Loading checkpoint complete")
 
 # test prediction

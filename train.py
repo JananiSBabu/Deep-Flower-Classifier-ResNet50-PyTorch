@@ -30,7 +30,6 @@ epochs = args["epochs"]
 device = torch.device('cuda' if args['gpu'] == 'gpu' and torch.cuda.is_available() else 'cpu')
 print("Device selected  :  ", device)
 
-# TODO remove this
 # hidden_units = [1024, 512, 256]
 print("hidden_units : ", hidden_units)
 print("arch : ", arch, type(arch))

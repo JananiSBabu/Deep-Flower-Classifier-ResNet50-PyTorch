@@ -8,6 +8,16 @@ import torch.optim as optim
 
 class ClassifierNetwork(nn.Module):
     def __init__(self, input_size, output_size, hidden_layers, drop_prob=0.2):
+        """
+            Creates a feed-forward classifier for a specified number of hidden layers
+
+            Args:
+                self: this object
+                input_size: number of nodes in input layer
+                output_size: number of nodes in output layer
+                hidden_layers: list of number of nodes for each hidden layer
+                drop_prob : drop probability for training
+        """
         super().__init__()
 
         # create input layer
@@ -26,6 +36,15 @@ class ClassifierNetwork(nn.Module):
         self.output_layer = nn.Linear(hidden_layers[-1], output_size)
 
     def forward(self, x):
+        """
+            performs a forward pass of the input image through the network
+
+            Args:
+                self: this object
+                x: input image
+            Returns:
+                x: image after going through a forward pass
+        """
         # add activation functions and dropouts to each layer
         for layer in self.hidden_layers:
             x = F.relu(layer(x))
@@ -37,14 +56,27 @@ class ClassifierNetwork(nn.Module):
         return x
 
 
-def validate(model, validloader, criterion, device):
+def validate(model, valid_loader, criterion, device):
+    """
+        Performs validation on the model using data specified in valid_loader
+
+        Args:
+            model: fully trained model
+            valid_loader: data loader that loads the validation data
+            criterion: criterion for defining the loss
+            device: execution device
+        Returns:
+            valid_loss: validation loss
+            accuracy: classification accuracy
+    """
     valid_loss = 0
     accuracy = 0
 
-    for images, labels in validloader:
-        # move the variables to GPU
+    for images, labels in valid_loader:
+        # move the variables to GPU, if requested
         images, labels = images.to(device), labels.to(device)
 
+        # perform a forward pass on validation image
         logps = model.forward(images)
         loss = criterion(logps, labels)
         valid_loss += loss.item()
@@ -59,7 +91,24 @@ def validate(model, validloader, criterion, device):
     return valid_loss, accuracy
 
 
-def train(model, trainloader, criterion, optimizer, device, validloader, epochs=1, print_every=40):
+def train(model, train_loader, criterion, optimizer, device, valid_loader, epochs=1, print_every=40):
+    """
+        Trains the model using data specified in train_loader and performs validation as we train
+
+        Args:
+            model: pre-trained model to be used for transfer learning
+            train_loader: data loader that loads teh training data
+            criterion: criterion for defining the loss
+            optimizer: optimizer for the classifier
+            device: execution device
+            valid_loader: data loader that loads the validation data
+            epochs: number of epochs
+            print_every: interval for performing validation and printing results
+        Returns:
+            model: fully trained model
+            train_loss: training loss
+            valid_loss: validation loss
+    """
     traintime = time.time()
     steps = 0
     training_loss = 0
@@ -71,7 +120,7 @@ def train(model, trainloader, criterion, optimizer, device, validloader, epochs=
 
     for epoch in range(epochs):
         model.train()
-        for images, labels in trainloader:
+        for images, labels in train_loader:
             steps += 1
 
             # move the variables to GPU
@@ -94,15 +143,15 @@ def train(model, trainloader, criterion, optimizer, device, validloader, epochs=
 
                 # turn off gradient computation for validation
                 with torch.no_grad():
-                    valid_loss, accuracy = validate(model, validloader, criterion, device)
+                    valid_loss, accuracy = validate(model, valid_loader, criterion, device)
 
-                train_losses.append(training_loss / len(trainloader))
-                valid_losses.append(valid_loss / len(validloader))
+                train_losses.append(training_loss / len(train_loader))
+                valid_losses.append(valid_loss / len(valid_loader))
 
                 print(f"Epoch {epoch + 1}/{epochs}.. "
-                      f"Train loss: {training_loss / len(trainloader):.3f}.. "
-                      f"validation loss: {valid_loss / len(validloader):.3f}.. "
-                      f"Validation accuracy: {accuracy / len(validloader):.3f}")
+                      f"Train loss: {training_loss / len(train_loader):.3f}.. "
+                      f"validation loss: {valid_loss / len(valid_loader):.3f}.. "
+                      f"Validation accuracy: {accuracy / len(valid_loader):.3f}")
 
                 training_loss = 0
 
@@ -114,11 +163,20 @@ def train(model, trainloader, criterion, optimizer, device, validloader, epochs=
     return model, train_losses, valid_losses
 
 
-def load_pretrained_models(modelname="resnet50"):
+def load_pretrained_models(model_name="resnet50"):
+    """
+        Build the pre-trained model for the specified deep learning architecture
+
+        Args:
+            model_name: pre-trained model architecture name
+        Returns:
+            model: loaded trained model
+            input_size: input size for creating the classifier
+    """
     input_size = 0
-    if modelname == "resnet50":
+    if model_name == "resnet50":
         model = models.resnet50(pretrained=True)
-    elif modelname == "densenet121":
+    elif model_name == "densenet121":
         model = models.densenet121(pretrained=True)
     else:
         model = models.resnet50(pretrained=True)
@@ -132,10 +190,27 @@ def load_pretrained_models(modelname="resnet50"):
 
 
 def construct_model(arch, hidden_units, num_output_classes, drop_prob=0.2, learning_rate=0.03):
-    # load the pre-trained model
-    model, input_size = load_pretrained_models(modelname=arch)
+    """
+        function rebuilds the model from scratch using pre-trained architecture
+        and custom classifier using transfer learning
 
-    # find the name of last layer in model
+        Args:
+            arch: pre-trained model architecture to use for transfer learning
+            hidden_units: list of number of hidden units
+            num_output_classes: number of output classes
+            drop_prob: drop probability for training (default = 0.2)
+            learning_rate: learning rate for training (default = 0.03)
+        Returns:
+            model: loaded trained model from checkpoint filename
+            input_size: input size for creating the classifier
+            optimizer: optimizer
+    """
+
+    # load the pre-trained model
+    model, input_size = load_pretrained_models(model_name=arch)
+
+    # find the name of last layer in model.
+    # Pre-trained models can have classifier layer name as "fc" or "classifier"
     l = []
     [l.append(name) for name, param in model.named_parameters()]
     last_layer = l[-1]
@@ -144,8 +219,7 @@ def construct_model(arch, hidden_units, num_output_classes, drop_prob=0.2, learn
     for param in model.parameters():
         param.requires_grad = False
 
-    # Create the classifier
-
+    # Create the custom classifier
     classifier = ClassifierNetwork(input_size, num_output_classes, hidden_units, drop_prob=drop_prob)
 
     print("classifier object created")
