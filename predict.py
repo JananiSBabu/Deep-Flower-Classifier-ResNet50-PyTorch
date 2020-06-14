@@ -29,15 +29,21 @@ image_path = args["image_path"]
 device = torch.device('cuda' if args['gpu'] == 'gpu' and torch.cuda.is_available() else 'cpu')
 print("Device selected  :  ", device)
 
+
 ############################################
 #               Functions
 ############################################
 
 def load_Checkpoint(filename, device):
-    """ function that loads a checkpoint and rebuilds the model
+    """
+    function that loads a checkpoint and rebuilds the model
 
     Args:
         filename: name of the checkpoint file of pre trained model
+        device: Executor device
+    Returns:
+        model: loaded trained model from filename
+        output_size: output size of loaded model
     """
 
     checkpoint = torch.load(filename)
@@ -46,7 +52,7 @@ def load_Checkpoint(filename, device):
     hidden_units = checkpoint['hidden_units']
     output_size = checkpoint['output_size']
     drop_prob = checkpoint['drop_prob']
-    
+
     # Construct a model from pretrained network and add a custom classifier
     model, input_size, optimizer = construct_model(arch, hidden_units, output_size, drop_prob)
 
@@ -58,28 +64,38 @@ def load_Checkpoint(filename, device):
 
 
 def predict(image_path, model, device, topk=10):
-    ''' Predict the class (or classes) of an image using a trained deep learning model.
-    '''
+    """
+        Predict the class (or classes) of an image using a trained deep learning model.
+
+        Args:
+            image_path: location of the test image
+            model: trained model
+            device: Executor device
+            top k: Top k probability results
+        Returns:
+            list(top_prob): list of top k probabilities
+            top_class: top k classes
+    """
 
     # TODO: Implement the code to predict the class from an image file
-    image = Image.open(image_path)
+    test_image = Image.open(image_path)
 
-    image_ndarray = image_processing_utils.process_image(image)
-    
+    image_ndarray = image_processing_utils.process_image(test_image)
+
     # turn off dropouts
     model.eval()
-    
+
     # create a torch tensor of type float32
     image_torch = torch.from_numpy(image_ndarray).type(torch.FloatTensor)
-    
+
     # Load model / inputs to device  
     model.to(device)
-    image_torch = image_torch.to(device)    
+    image_torch = image_torch.to(device)
     print("device :", device)
     print("image_torch :", image_torch.device)
 
     # reshape to incorporate batch size
-    batch_img = torch.unsqueeze(image_torch, 0) 
+    batch_img = torch.unsqueeze(image_torch, 0)
 
     logps = model(batch_img)
     ps = torch.exp(logps)
@@ -92,7 +108,7 @@ def predict(image_path, model, device, topk=10):
     # move tensors to CPU for numpy operations
     top_prob = top_prob.cpu()
     top_idx = top_idx.cpu()
-    
+
     # convert torch to numpy    
     top_idx = top_idx[0].numpy()
     top_class = [idx_to_class[entry] for entry in top_idx]
@@ -109,29 +125,24 @@ if category_names_file:
         cat_to_name = json.load(f)
 
 criterion = nn.NLLLoss()
-new_model, num_output_classes= load_Checkpoint(checkpoint_file, device)
-print("Loading che ckpoint complete")
-
+new_model, num_output_classes = load_Checkpoint(checkpoint_file, device)
+print("Loading checkpoint complete")
 
 # test prediction
 with torch.no_grad():
-
     top_prob, top_class = predict(image_path, new_model, device, top_k)
 
     image = Image.open(image_path)
     image_ndarray = image_processing_utils.process_image(image)
     image_torch = torch.from_numpy(image_ndarray)
-    #image_processing_utils.imshow(image_torch)
+    # image_processing_utils.imshow(image_torch)
 
     print(top_prob)
     print(top_class)
 
-    #image_processing_utils.view_classify(image_torch, top_prob, top_class, top_k, cat_to_name)
-    
-    
+    # image_processing_utils.view_classify(image_torch, top_prob, top_class, top_k, cat_to_name)
 
-        
-    print("\n\n ** prediction - results **")    
+    print("\n\n ** prediction - results **")
     if cat_to_name:
         class_names = [cat_to_name[item] for item in top_class]
     else:
@@ -139,5 +150,3 @@ with torch.no_grad():
     print("Class name : ", class_names[0])
     print("Class number : ", top_class[0])
     print("Probability : ", top_prob[0], "\n")
-    
-    
