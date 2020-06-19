@@ -11,7 +11,6 @@ This project uses **Transfer learning** for training the model. First, a pretrai
 The project supports running execution in both CPU and CUDA environments.
 
 Date Created : 05/05/2020
-
 Author: Janani, S. Babu
 
 ## Dataset
@@ -27,7 +26,9 @@ The model uses the dataset from [Maria-Elena Nilsback and Andrew Zisserman](http
 Refer to **usage_train.py.png** and **usage_test.py.png** for input arguments. Alternatively you can use -h to display the help section of the application (example: python train.py -h)
 
 **Training**
-Basic usage `python train.py data_directory` 
+
+Basic usage - `python train.py data_directory`.  
+
 Options
 * Set directory to save checkpoints: `python train.py data_dir --save_dir save_directory`
 * Choose architecture: `python train.py data_dir --arch "resnet50"`
@@ -36,7 +37,9 @@ Options
 * Use GPU for training: `python train.py data_dir --gpu`
 
 **Prediction**
-Basic usage: `python predict.py /path/to/image checkpoint` 
+
+Basic usage - `python predict.py /path/to/image checkpoint`.
+ 
 Options
 * Return top K most likely classes: `python predict.py input checkpoint --top_k 3`
 * Use a mapping of categories to real names: `python predict.py input checkpoint --category_names cat_to_name.json`
