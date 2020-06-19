@@ -26,8 +26,8 @@ The model uses the dataset from [Maria-Elena Nilsback and Andrew Zisserman](http
 ## Usage
 Refer to **usage_train.py.png** and **usage_test.py.png** for input arguments. Alternatively you can use -h to display the help section of the application (example: python train.py -h)
 
-`train.py`
-Basic usage `python train.py data_directory`
+**Training**
+Basic usage `python train.py data_directory` 
 Options
 * Set directory to save checkpoints: `python train.py data_dir --save_dir save_directory`
 * Choose architecture: `python train.py data_dir --arch "resnet50"`
@@ -35,8 +35,8 @@ Options
 * Set multiple hidden layers: `python train.py data_dir --learning_rate 0.01 --hidden_units 1024 512 256 --epochs 20`
 * Use GPU for training: `python train.py data_dir --gpu`
 
-`predict.py`
-Basic usage: `python predict.py /path/to/image checkpoint`
+**Prediction**
+Basic usage: `python predict.py /path/to/image checkpoint` 
 Options
 * Return top K most likely classes: `python predict.py input checkpoint --top_k 3`
 * Use a mapping of categories to real names: `python predict.py input checkpoint --category_names cat_to_name.json`
