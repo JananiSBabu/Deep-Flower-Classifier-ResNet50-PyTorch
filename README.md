@@ -1,4 +1,6 @@
-# image-classifier-pytorch
+# Deep flower classifier using PyTorch ResNet50
+
+![flower_classifier](https://github.com/JananiSBabu/flower-image-classifier-pytorch-torchvision/blob/master/assets/website_img1.png)
 This repository contains the code for building an image classifier that can identify different species of flowers. This was build on pytorch deep learning framework and using python. This project was completed as part of **AI Programming with Python Nanodegree program (Udacity)**.
 
 The project can be broken into the following subparts
